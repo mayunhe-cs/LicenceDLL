@@ -6,6 +6,8 @@ md5: https://www.cnblogs.com/flying_bat/archive/2007/09/25/905133.html
      https://www.cnblogs.com/ydxt/p/3582141.html (todo)
 */
 #include <vector>
+#include <regex>
+#include <ctime>
 #include <algorithm>
 
 //#include "pch.h"
@@ -17,34 +19,25 @@ md5: https://www.cnblogs.com/flying_bat/archive/2007/09/25/905133.html
 #include "md5.h"
 
 
-
 using std::vector;
+//using std::transform;
 
-// 这是已导出类的构造函数。
-Clicence::Clicence()
-{
-    LicenceConstants::init();
-    return;
-}
-
-// 这是导出变量的一个示例
-LICENCE_API int nlicence=0;
-
-// 这是导出函数的一个示例。
-LICENCE_API int fnlicence(void)
-{
-    return 0;
-}
-
+// 将注册码转换成licence对象
+Licence* regist2Licence(string regist);
+string generalShortSerial(string serial);
+void persistLicence(Licence* pLicence);
+bool validateExpire(Licence* pLicence);
 
 string LicenceConstants::secretKey = "LEe4J1Qom9P3WV0v3SvmOQ==";
 string LicenceConstants::licencePath;
+
 void LicenceConstants::init()
 {
     char basePath[_MAX_PATH];
     _getcwd(basePath, _MAX_PATH);
     licencePath = string(basePath) + "\\.licence";
 }
+
 // 使用了 extern "C" ，若返回string会有警告
 void generateSerial(char* serial)
 {
@@ -64,7 +57,7 @@ void generateSerial(char* serial)
     std::cout << "AES result: " << aes_res_str << std::endl;
 
     string md5_res = MD5(aes_res_str).toString();
-    transform(md5_res.begin(), md5_res.end(), md5_res.begin(), std::toupper);
+    transform(md5_res.begin(), md5_res.end(), md5_res.begin(), ::toupper);
 
     for (int i = 1; i < 8; i++) {
         md5_res.insert(md5_res.begin() + 5 * i - 1, '-');
@@ -74,11 +67,26 @@ void generateSerial(char* serial)
 
 bool validateRegistCode(string regist)
 {
-    regist2Licence(regist);
+    bool valid = false;
+    Licence *pLicence = regist2Licence(regist);
     char serial[40];
     generateSerial(serial);
-    // TODO
-    return false;
+    string shortSerial = generalShortSerial(serial);
+    if (shortSerial == pLicence->getSerial())
+    {
+        pLicence->setSerial(serial);
+        // setDigest
+        if (validateExpire(pLicence))
+        {
+            persistLicence(pLicence);
+            valid = true;
+            return true;
+        }
+    }
+    
+
+    if(pLicence) delete pLicence;
+    return valid;
 }
 
 bool validateLicence()
@@ -87,7 +95,7 @@ bool validateLicence()
 }
 
 
-
+// 将注册码转换成licence对象
 Licence* regist2Licence(string regist)
 {
     Licence* licence = new Licence;
@@ -100,8 +108,9 @@ Licence* regist2Licence(string regist)
     while (nPos != string::npos)  
     {
         regist.replace(nPos, 1, "");
-        nPos = regist.find(" ", nPos);
+        nPos = regist.find("-", nPos);
     }
+    transform(regist.begin(), regist.end(), regist.begin(), tolower);
 
     vector<unsigned char> data(regist.begin(), regist.end());
 
@@ -119,5 +128,54 @@ Licence* regist2Licence(string regist)
         licence->setExpire("1" + expire);
     }
     return licence;
+
+}
+
+string generalShortSerial(string serial)
+{
+    // 实现split
+    std::regex reg("-");
+    std::vector<std::string> items(std::sregex_token_iterator(serial.begin(), serial.end(), reg, -1), std::sregex_token_iterator());
+
+    string shortSerial;
+    for (int i = 1; i < items.size(); i++)
+    {
+        string item = items.at(i);
+        shortSerial.append(1, item.at(i % 4));
+    }
+    return shortSerial;
+}
+
+time_t StringToDatetime(string str)
+{
+    int year = std::stoi(str.substr(1, 4));
+    int month = std::stoi(str.substr(5, 2));
+    int day = std::stoi(str.substr(7, 2));
+    tm tm_;                                    // 定义tm结构体。
+    tm_.tm_year = year - 1900;                 // 年，由于tm结构体存储的是从1900年开始的时间，所以tm_year为int临时变量减去1900。
+    tm_.tm_mon = month - 1;                    // 月，由于tm结构体的月份存储范围为0-11，所以tm_mon为int临时变量减去1。
+    tm_.tm_mday = day;                         // 日。
+    //tm_.tm_hour = hour;                        // 时。
+    //tm_.tm_min = minute;                       // 分。
+    //tm_.tm_sec = second;                       // 秒。
+    //tm_.tm_isdst = 0;                          // 非夏令时。
+    time_t t_ = mktime(&tm_);                  // 将tm结构体转换成time_t格式。
+    return t_;                                 // 返回值。
+}
+
+bool validateExpire(Licence* pLicence)
+{
+    // TODO 完整性验证
+    string expire = pLicence->getExpire();
+    if (expire.at(0) == '1')
+    {
+        time_t expireTime = StringToDatetime(expire);
+        return time(0) < expireTime;
+    }
+    return true;
+}
+
+void persistLicence(Licence* pLicence)
+{
 
 }

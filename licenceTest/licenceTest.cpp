@@ -3,11 +3,14 @@
 
 #include <iostream>
 #include <windows.h>
+#include <string>
 
 using std::cout;
 using std::endl;
+using std::string;
 
 typedef void(*pGenerateSerial)(char* serial);
+typedef bool (*pValidateRegistCode)(string regist);
 int main()
 {
     HMODULE hDLL = LoadLibrary(TEXT("licence.dll"));
@@ -24,6 +27,18 @@ int main()
         {
             cout << "Cannot Find Function " << "generateSerial" << endl;
         }
+
+        pValidateRegistCode validateRegistCode = pValidateRegistCode(GetProcAddress(hDLL, "validateRegistCode"));
+        if (validateRegistCode != NULL)
+        {
+            validateRegistCode("5B01-98DD-B50A-CA07-826D-BE41-3AA2-80F9");
+            cout << "validateRegistCode run!" << endl;
+        }
+        else
+        {
+            cout << "Cannot Find Function " << "validateRegistCode" << endl;
+        }
+
         FreeLibrary(hDLL);
     }
     else

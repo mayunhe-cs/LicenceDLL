@@ -28,11 +28,12 @@ public:
     Licence(string _serial) :Licence(_serial, "", "") {}
     Licence() {}
 
-    string getSerial() { return serial; }
+    string getSerial() const { return serial; }
     void setSerial(string _serial) { serial = _serial; }
-    string getExpire() { return expire; }
+    string getExpire() const { return expire; }
     void setExpire(string _expire) { expire = _expire; }
 };
+
 class LicenceConstants
 {
 public:
@@ -42,7 +43,6 @@ public:
     static void init();
 };
 
-Licence* regist2Licence(string regist);
 
 #ifdef __cplusplus         // if used by C++ code
 extern "C" {                  // we need to export the C interface
