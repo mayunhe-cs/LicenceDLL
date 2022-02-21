@@ -18,6 +18,7 @@ md5: https://www.cnblogs.com/flying_bat/archive/2007/09/25/905133.html
 #include "base64.h"
 #include "md5.h"
 
+#define SECRET_KEY "LEe4J1Qom9P3WV0v3SvmOQ=="
 
 using std::vector;
 //using std::transform;
@@ -28,7 +29,6 @@ string generalShortSerial(string serial);
 void persistLicence(Licence* pLicence);
 bool validateExpire(Licence* pLicence);
 
-string LicenceConstants::secretKey = "LEe4J1Qom9P3WV0v3SvmOQ==";
 string LicenceConstants::licencePath;
 
 void LicenceConstants::init()
@@ -48,7 +48,9 @@ void generateSerial(char* serial)
     // 确定一下是否不需要getBytes操作
     // 调用ECB/CBC/CFB  AESKeyLength::AES_128/AES_192/AES_256 ?
     vector<unsigned char> mac_plain(mac, mac + strlen(reinterpret_cast<char*>(mac))-1); // strlen(reinterpret_cast<char*>(mac) - 1) == 16
-    string base64_key = base64_encode(reinterpret_cast<const unsigned char*>(LicenceConstants::secretKey.c_str()), LicenceConstants::secretKey.length());
+    
+    // 对密钥进行解码，获取原始密钥
+    string base64_key = base64_encode(reinterpret_cast<const unsigned char*>(SECRET_KEY), sizeof(SECRET_KEY));
     vector<unsigned char> key(base64_key.begin(), base64_key.end());
     
     AES aes(AESKeyLength::AES_128); 
@@ -99,10 +101,10 @@ bool validateLicence()
 Licence* regist2Licence(string regist)
 {
     Licence* licence = new Licence;
-    string base64_key = base64_encode(reinterpret_cast<const unsigned char*>(LicenceConstants::secretKey.c_str()), LicenceConstants::secretKey.length());
+    string base64_key = base64_encode(reinterpret_cast<const unsigned char*>(SECRET_KEY), sizeof(SECRET_KEY));
     vector<unsigned char> key(base64_key.begin(), base64_key.end());
 
-    // 替换'-'为空
+    // 删除授权码中的 "-"
     size_t nPos = 0;
     nPos = regist.find("-", nPos);  // 查找空格在str中第一次出现的位置
     while (nPos != string::npos)  
@@ -138,7 +140,7 @@ string generalShortSerial(string serial)
     std::vector<std::string> items(std::sregex_token_iterator(serial.begin(), serial.end(), reg, -1), std::sregex_token_iterator());
 
     string shortSerial;
-    for (int i = 1; i < items.size(); i++)
+    for (size_t i = 1; i < items.size(); i++)
     {
         string item = items.at(i);
         shortSerial.append(1, item.at(i % 4));

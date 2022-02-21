@@ -13,6 +13,7 @@
 
 #include <string>
 #include <direct.h>
+
 using std::string;
 
 class Licence
@@ -37,7 +38,6 @@ public:
 class LicenceConstants
 {
 public:
-    static string secretKey;
     static string licencePath;
 
     static void init();

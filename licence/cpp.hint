@@ -1,2 +1,0 @@
-#define LICENCE_API __declspec(dllexport)
-#define LICENCE_API __declspec(dllimport)
